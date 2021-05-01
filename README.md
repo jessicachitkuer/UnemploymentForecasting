@@ -24,4 +24,4 @@ Notes:               An initial claim is a claim filed by an unemployed individu
                      basic eligibility for the Unemployment Insurance program.
 
 
-Citations: U.S. Employment and Training Administration, Initial Claims [ICSA], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/ICSA, April 30, 2021.
+Citations: U.S. Employment and Training Administration, Initial Claims [ICSA], retrieved from Federal Reserve Bank.
