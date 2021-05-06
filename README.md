@@ -1,6 +1,6 @@
 # UnemploymentForecasting
 
-#### Data Specification 
+### Data Specification 
 
 Title:               Initial Claims
 
@@ -25,3 +25,14 @@ Notes:               An initial claim is a claim filed by an unemployed individu
                      basic eligibility for the Unemployment Insurance program.
 
 Citations: U.S. Employment and Training Administration, Initial Claims [ICSA].
+
+
+
+### Analysis Methods
+
+<ul>
+ <li>Exploratory data analysis.</li>  
+ <li>Time series analysis.</li>  
+ <li>Regression on time series using tslm function.</li>  
+ <li>Tests of significance - Hypothesis testing.</li>  
+</ul>
