@@ -1,24 +1,27 @@
 # UnemploymentForecasting
 
-### Data Specification 
+#### Data Specification 
 
-Title:               Initial Claims
+<li>Title:               Initial Claims</li>
 
-Series ID:           ICSA 
+<li>Series ID:           ICSA </li>
 
-Source:              U.S. Employment and Training Administration
+<li>Source:              U.S. Employment and Training Administration</li>
 
-Release:             Unemployment Insurance Weekly Claims Report
+<li>Release:             Unemployment Insurance Weekly Claims Report</li>
 
-Seasonal Adjustment: Seasonally Adjusted
+<li>Seasonal Adjustment: Seasonally Adjusted</li>
 
-Frequency:           Weekly, Ending Saturday
+<li>Frequency:           Weekly, Ending Saturday</li>
 
-Units:               Number
+<li>Units:               Number</li>
 
-Time Series Range:   Until 2021-04-24
+<li>Time Series Range:   Until 2021-04-24</li>
 
-Last Updated:        2021-04-29 7:33 AM CDT
+<li>Last Updated:        2021-04-29 7:33 AM CDT</li>
+
+<p>
+
 
 Notes:               An initial claim is a claim filed by an unemployed individual after a
                      separation from an employer. The claim requests a determination of
@@ -28,7 +31,7 @@ Citations: U.S. Employment and Training Administration, Initial Claims [ICSA].
 
 
 
-### Analysis Methods
+#### Analysis Methods
 
 <ul>
  <li>Exploratory data analysis.</li>  
