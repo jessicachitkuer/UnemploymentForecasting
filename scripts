@@ -1,32 +1,5 @@
-Skip to content
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- 
 @jessicachitkuer 
-usdigitalresponse
-3
-73
-Code
-Issues
-33
-Pull requests
-3
-Actions
-Projects
-2
-Wiki
-Security
-Insights
 
-…
-Latest commit 5984936 on Apr 23, 2020
- History
-248 lines (218 sloc)  7.97 KB
-  
 /**
  * This script will populate `form.json` with translations. It can be used in an iterative manner
  * as new copy is added to `form.json`, since it will only perform translations if a translation
@@ -275,5 +248,3 @@ function translate(languageCode) {
   console.error(err)
   process.exit(1)
 })
-
-
