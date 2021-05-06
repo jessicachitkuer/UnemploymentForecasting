@@ -1,0 +1,291 @@
+Skip to content
+Search or jump to…
+
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@jessicachitkuer 
+usdigitalresponse
+3
+73
+Code
+Issues
+33
+Pull requests
+3
+Actions
+Projects
+2
+Wiki
+Security
+Insights
+
+…
+Latest commit 5984936 on Apr 23, 2020
+ History
+248 lines (218 sloc)  7.97 KB
+  
+/**
+ * This script will populate `form.json` with translations. It can be used in an iterative manner
+ * as new copy is added to `form.json`, since it will only perform translations if a translation
+ * doesn't already exist.
+ *
+ * Translations are stored in `form.json` like so for any translatable copy:
+ *
+ *   "title": {
+ *      "en": "Name",
+ *      "es": "Nombre",
+ *      "zh": "名称"
+ *   }
+ *
+ * This script will do a first-pass with Google Translate. It's expected that a second-pass
+ * would be done by a native speaker in each supported language.
+ *
+ * To run this script, you'll need a Google Cloud Platform (GCP) account. You can set up your GCP
+ * account by clicking the "Set up a project" button here: https://cloud.google.com/translate/docs/basic/setup-basic
+ *
+ * The free plan gives you about 500k chars of translations, so you'll be fine with that.
+ *
+ * Once you got through that setup, GCP will have you download a JSON key. You can then use that key
+ * to run this script like so (make sure to update your credentials path below!):
+ *
+ *   GOOGLE_APPLICATION_CREDENTIALS=~/Downloads/PAPUA-59beefc0cfb4.json node ./scripts/translate.js
+ *
+ * This script can be extended to translate other languages by adding more `translate` calls at the
+ * bottom of this script.
+ *
+ * If you want to re-translate all copy in `form.json`, set `FORCE=true` in your environment, like so:
+ *
+ *   FORCE=true GOOGLE_APPLICATION_CREDENTIALS=~/Downloads/PAPUA-59beefc0cfb4.json node ./scripts/translate.js
+ */
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+
+const fs = require('fs')
+const { Translate } = require('@google-cloud/translate').v2
+const yaml = require('js-yaml')
+const prettier = require('prettier')
+const translater = new Translate()
+const colors = require('colors')
+
+const filename = process.env.FILE || 'form.yml'
+const filepath = `public/${filename}`
+
+const f = fs.readFileSync(filepath, {
+  encoding: 'utf-8',
+})
+
+const form = yaml.safeLoad(f)
+
+if (!form) {
+  console.error(
+    colors.red(
+      `\n⚠️  The form (${filepath}) is empty. Did you want to run this on form.sample.yml? If so, run this script with FILE=form.sample.yml`
+    )
+  )
+  process.exit(1)
+}
+
+async function map(f) {
+  const updateQuestion = async (question) => {
+    // Update the question's name
+    question.name = await f(question.name)
+
+    // Update the question's instructions, if any
+    if (question.instructions) {
+      question.instructions = await f(question.instructions)
+    }
+
+    // Update the question's options, if any
+    if (question.options) {
+      for (let i = 0; i < question.options.length; i++) {
+        // Update the option's name
+        question.options[i].name = await f(question.options[i].name)
+      }
+    }
+
+    // Update the questions's switches, if any
+    if (question.switch) {
+      for (const field of Object.keys(question.switch)) {
+        if (question.switch[field]) {
+          for (let j = 0; j < question.switch[field].length; j++) {
+            question.switch[field][j] = await updateQuestion(question.switch[field][j])
+          }
+        }
+      }
+    }
+
+    // Update the validation errors, if any
+    if (question.validate) {
+      for (let j = 0; j < question.validate.length; j++) {
+        question.validate[j].error = await f(question.validate[j].error)
+      }
+    }
+
+    return question
+  }
+
+  // Update the top-level page title and description.
+  form.title = await f(form.title)
+  form.description = await f(form.description)
+
+  // Update the top-level instructional copy:
+  for (const id of Object.keys(form.instructions)) {
+    form.instructions[id] = await f(form.instructions[id])
+  }
+
+  // Update the copy in each page:
+  const pages = form.pages
+  for (let i = 0; i < pages.length; i++) {
+    // Update the title
+    pages[i].title = await f(pages[i].title)
+
+    // Update the heading
+    pages[i].heading = await f(pages[i].heading)
+
+    // Update the page's instructions, if any
+    if (pages[i].instructions) {
+      pages[i].instructions = await f(pages[i].instructions)
+    }
+
+    // Update the question's copy:
+    for (let j = 0; j < pages[i].questions.length; j++) {
+      pages[i].questions[j] = await updateQuestion(pages[i].questions[j])
+    }
+  }
+
+  // Write back the updated pages
+  form.pages = pages
+}
+
+function translate(languageCode) {
+  return async (copy) => {
+    // Don't translate if we already have translated this field.
+    if (copy[languageCode] && process.env.FORCE !== 'true') {
+      return copy
+    }
+
+    // Just copy numbers verbatim (f.e. GT translates "0" in spanish to "0 0" ¯\_(ツ)_/¯)
+    const isNumber = !isNaN(copy.en)
+    if (isNumber) {
+      return {
+        ...copy,
+        [languageCode]: copy.en,
+      }
+    }
+
+    try {
+      const result = await translater.translate(copy.en, {
+        to: languageCode,
+      })
+      if (result.length > 0 && result[0].length > 0) {
+        const content = result[0]
+          // In Chinese, replace fancy ()'s with normal ()'s.
+          .replace(/（/g, '(')
+          .replace(/）/g, ')')
+          // Google Translate will insert a space between the ] and ( in markdown links.
+          .replace(/\] \(/g, '](')
+          // Same with mailto links
+          .replace(/mailto: /g, 'mailto:')
+          // Google Translate seems to be adding no-break-spaces in front of
+          // list items. So remove those so that the Markdown will format correctly.
+          .replace(/\u00A0/g, ' ')
+          // For chinese, it also inserts some weird pound signs that aren't
+          // registering as valid in the Markdown parser.
+          .replace(/＃/g, '#')
+          // In Chinese, whitespace is removed after list items and counters
+          .replace(/^\s*-\S/gm, (a) => a.replace('-', '- '))
+          .replace(/^\s*([0-9]+\.)\S/gm, (a, match) => a.replace(/[0-9]+\./, `${match} `))
+
+        return {
+          ...copy,
+          [languageCode]: content,
+        }
+      }
+    } catch (err) {
+      // If we fail to query the Google Translate API, just skip this text
+      console.error({
+        message: 'Failed to translate text',
+        copy,
+        error: err,
+      })
+    }
+
+    return copy
+  }
+}
+
+;(async () => {
+  // We originally stored copy in forms like `title: "Foo"` but
+  // when we introduced i18n, we moved to a format like `title: { en: "Foo" }`
+  // If you need to convert a form from the former to the latter, then
+  // uncomment the following line.
+  // await map((copy) => ({ en: copy.en }))
+
+  // If you want to add other languages, make sure to use codes from:
+  // https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+
+  // Add spanish translations
+  await map(translate('es'))
+
+  // Add chinese translations
+  await map(translate('zh'))
+
+  let contents = ''
+  try {
+    contents = yaml.safeDump(form, {
+      noCompatMode: true,
+      lineWidth: 120,
+      // js-yaml tries to be smart and use >- if a line needs to wrap
+      // otherwise using |- (literal). This leads to a mixture of
+      // >- and |-. Ideally we just use one everywhere. There is an open
+      // PR for this, but it's not likely to merge anytime soon so we're using
+      // a fork under colinking/js-yaml that includes preferredBlockStyle
+      // which allows you to choose which one to use.
+      preferredBlockStyle: 'literal',
+    })
+  } catch (err) {
+    // Even through we reference a specific commit, it seems that `yarn install` doesn't always
+    // bump the dep... We might want to upstream a fix to yarn at some point, but until then
+    // we just surface a nicer error message:s
+    if (String(err).includes('preferredBlockStyle')) {
+      console.error(
+        colors.red(
+          `\n⚠️  Your Yarn dependencies are out-of-date -- run 'yarn upgrade js-yaml' then re-run this script.`
+        )
+      )
+      process.exit(1)
+    } else {
+      throw err
+    }
+  }
+
+  // Run prettier on this file.
+  const options = await prettier.resolveConfig()
+  const formatted = prettier.format(contents, {
+    ...options,
+    parser: 'yaml',
+  })
+  fs.writeFileSync(filepath, formatted, {
+    encoding: 'utf-8',
+  })
+})().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})
+© 2021 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading complete
+
